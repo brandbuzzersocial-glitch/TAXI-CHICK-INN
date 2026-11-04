@@ -1,0 +1,664 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Taxi Chick-Inn Jaipur</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Poppins:wght@400;500;600;700&family=Kaushan+Script&display=swap">
+<style>
+/* Layout: a fixed WebGL walk-through of the restaurant (street → door → dining room → table → tandoor → outlets wall → menu board) behind scrolling content cards. */
+:root{
+  color-scheme: dark;
+  --night:#0C0A09;
+  --char:#171412;
+  --taxi:#FFC928;
+  --chili:#E0262D;
+  --ink:#F7F1E3;
+  --smoke:#B8AE9F;
+  --panel:rgba(16,13,11,0.86);
+  --line:rgba(255,201,40,0.30);
+  --open:#4ADE80;
+  --f-display:'Anton', Impact, 'Arial Narrow', sans-serif;
+  --f-body:'Poppins', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --f-script:'Kaushan Script', 'Brush Script MT', cursive;
+}
+html{background:var(--night)}
+body{background:var(--night);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.6;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--night)}
+#scene{position:fixed;inset:0;width:100%;height:100%;z-index:0;display:block;touch-action:pan-y;cursor:grab}
+#scene.dragging{cursor:grabbing}
+#scene.pointing{cursor:pointer}
+.fallback{position:fixed;inset:0;z-index:0;display:none;background:
+  radial-gradient(60% 40% at 70% 60%, rgba(255,201,40,0.16), transparent 70%),
+  radial-gradient(50% 50% at 20% 20%, rgba(224,38,45,0.14), transparent 70%), var(--night)}
+.no-webgl .fallback{display:block}
+.no-webgl #scene{display:none}
+
+/* top bar */
+.topbar{position:fixed;top:0;left:0;right:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding-top:calc(10px + env(safe-area-inset-top,0px));padding-bottom:10px;
+  padding-left:max(16px, env(safe-area-inset-left,0px));padding-right:max(16px, env(safe-area-inset-right,0px));
+  background:linear-gradient(rgba(12,10,9,0.92), rgba(12,10,9,0))}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink)}
+.brand img{width:72px;height:auto;border-radius:6px;display:block}
+.brand span{font-family:var(--f-display);font-size:19px;letter-spacing:0.04em;text-transform:uppercase}
+.nav{display:flex;align-items:center;gap:4px}
+.nav a{color:var(--ink);text-decoration:none;font-size:13px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;padding:10px 12px;border-radius:999px;min-height:44px;display:inline-flex;align-items:center}
+.nav a:hover{color:var(--taxi)}
+.nav a.order{background:var(--taxi);color:var(--night);margin-left:6px}
+.nav a.order:hover{color:var(--night);background:#ffd75a}
+a:focus-visible,button:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+
+/* status pill */
+.status{position:fixed;z-index:5;left:calc(16px + env(safe-area-inset-left,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));
+  display:flex;align-items:center;gap:10px;background:rgba(12,10,9,0.88);border:1px solid var(--line);border-radius:999px;padding:8px 14px 8px 10px;font-size:13px;font-weight:600}
+.status .led{width:10px;height:10px;border-radius:50%;background:var(--open);box-shadow:0 0 10px var(--open)}
+.status small{color:var(--smoke);font-weight:500}
+
+/* where-am-i */
+.room{position:fixed;z-index:5;right:calc(16px + env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));
+  background:#0a0a0a;border:2px solid var(--taxi);border-radius:8px;padding:6px 12px;font-family:var(--f-display);font-size:16px;letter-spacing:0.06em;text-transform:uppercase;color:var(--taxi)}
+
+/* chapter dots */
+.dots{position:fixed;z-index:5;right:calc(20px + env(safe-area-inset-right,0px));top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:4px;list-style:none;margin:0;padding:0}
+.dots button{all:unset;cursor:pointer;display:flex;align-items:center;justify-content:flex-end;gap:10px;min-height:32px;padding:4px 0}
+.dots .t{font-size:11px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:var(--smoke);opacity:0;transform:translateX(6px);transition:opacity .25s, transform .25s}
+.dots .d{width:12px;height:12px;border:2px solid var(--taxi);border-radius:2px;transform:rotate(45deg);transition:background .25s}
+.dots button:hover .t,.dots button.on .t,.dots button:focus-visible .t{opacity:1;transform:none}
+.dots button.on .d{background:var(--taxi)}
+.dots button.on .t{color:var(--taxi)}
+
+/* sections */
+main{position:relative;z-index:2;pointer-events:none}
+.sec{min-height:118vh;display:flex;align-items:center;
+  padding-left:max(16px, env(safe-area-inset-left,0px));padding-right:max(16px, env(safe-area-inset-right,0px));padding-block:110px}
+.sec.right{justify-content:flex-end}
+.card{pointer-events:auto;max-width:540px;width:100%;margin-inline:clamp(0px, 5vw, 72px);background:var(--panel);border:1px solid var(--line);border-radius:14px;
+  padding:28px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 30px 60px rgba(0,0,0,0.5);min-width:0}
+.card.wide{max-width:680px}
+.checker{height:10px;margin:-28px -28px 22px;border-radius:14px 14px 0 0;background:repeating-conic-gradient(var(--taxi) 0 25%, #050505 0 50%) 0 0/20px 20px}
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:0.24em;text-transform:uppercase;color:var(--taxi)}
+h1,h2,h3{font-family:var(--f-display);font-weight:400;text-transform:uppercase;line-height:0.98;letter-spacing:0.01em;text-wrap:balance;margin:10px 0 0}
+h2{font-size:clamp(36px, 6vw, 56px)}
+h2 em{font-style:normal;color:var(--taxi)}
+.card p{margin:14px 0 0;text-wrap:pretty}
+.muted{color:var(--smoke);font-size:14px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0 0;padding:0;list-style:none}
+.chips li{font-size:13px;font-weight:600;border:1px solid var(--line);padding:6px 12px;border-radius:999px}
+.chips li b{color:var(--taxi)}
+.btns{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+.btn{display:inline-flex;align-items:center;gap:8px;min-height:46px;padding:0 20px;border-radius:999px;font-weight:700;font-size:14px;letter-spacing:0.06em;text-transform:uppercase;text-decoration:none;border:2px solid var(--taxi);color:var(--ink);background:transparent;cursor:pointer;font-family:var(--f-body)}
+.btn.solid{background:var(--taxi);color:var(--night)}
+.btn:hover{background:var(--taxi);color:var(--night)}
+
+/* hero */
+.hero{min-height:100vh;align-items:flex-end;padding-block:120px 80px}
+.hero .card{background:transparent;border:none;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none;padding:0;max-width:660px}
+.hero h1{font-size:clamp(60px, 11vw, 140px);line-height:0.88;margin-top:12px}
+.hero h1 .y{color:var(--taxi);display:block}
+.hero .sub{font-size:clamp(16px, 2vw, 19px);max-width:32em;margin-top:16px}
+.script{font-family:var(--f-script);font-size:clamp(24px, 3vw, 32px);color:var(--taxi);margin-top:14px;line-height:1.2}
+.tip{margin-top:18px;font-size:12px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--smoke)}
+
+/* timeline */
+.tl{list-style:none;margin:20px 0 0;padding:0;display:grid;gap:0}
+.tl li{display:grid;grid-template-columns:86px minmax(0,1fr);gap:14px;padding:12px 0;border-top:1px dashed var(--line)}
+.tl .y{font-family:var(--f-display);font-size:24px;color:var(--taxi);line-height:1.1}
+.tl b{display:block;font-size:15px}
+.tl span{font-size:14px;color:var(--smoke)}
+
+/* gallery */
+.gal{display:grid;grid-template-columns:repeat(3, minmax(0,1fr));gap:8px;margin-top:18px}
+.gal img{width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:8px;display:block;max-width:100%}
+
+/* menu */
+.tabs{display:flex;flex-wrap:wrap;gap:6px;margin-top:18px}
+.tabs button{all:unset;cursor:pointer;font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;padding:9px 14px;border-radius:999px;border:1px solid var(--line);color:var(--ink);min-height:20px}
+.tabs button[aria-selected="true"]{background:var(--taxi);color:var(--night);border-color:var(--taxi)}
+.menu-list{list-style:none;margin:16px 0 0;padding:0;display:grid;grid-template-columns:repeat(2, minmax(0,1fr));gap:0 22px}
+.menu-list li{padding:12px 0;border-bottom:1px solid rgba(247,241,227,0.12);min-width:0}
+.menu-list .n{font-weight:700;font-size:15px;display:flex;align-items:center;gap:8px}
+.menu-list .d{font-size:13px;color:var(--smoke);margin-top:2px}
+.veg,.nv{display:inline-block;width:12px;height:12px;border:1.5px solid;border-radius:2px;position:relative;flex:0 0 12px}
+.veg{border-color:#3fb950}.veg::after{content:"";position:absolute;inset:2px;border-radius:50%;background:#3fb950}
+.nv{border-color:#e5484d}.nv::after{content:"";position:absolute;left:1.5px;right:1.5px;top:2px;bottom:2px;background:#e5484d;clip-path:polygon(50% 0,100% 100%,0 100%)}
+.hero-dish{display:grid;grid-template-columns:150px minmax(0,1fr);gap:16px;margin-top:18px;align-items:center;background:rgba(255,201,40,0.08);border:1px solid var(--line);border-radius:12px;padding:12px}
+.hero-dish img{width:150px;height:150px;object-fit:cover;border-radius:8px;display:block}
+.hero-dish h3{font-size:28px;margin:4px 0 0;color:var(--taxi)}
+.hero-dish p{margin:6px 0 0;font-size:14px}
+
+/* outlets */
+.outlets{display:grid;gap:12px;margin-top:18px}
+.outlet{border:1px solid var(--line);border-radius:12px;padding:16px;background:rgba(0,0,0,0.35)}
+.outlet .top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.outlet h3{font-size:26px;margin:0}
+.badge{font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;padding:4px 10px;border-radius:999px;display:inline-flex;align-items:center;gap:6px}
+.badge.on{background:rgba(74,222,128,0.14);color:var(--open)}
+.badge.off{background:rgba(224,38,45,0.16);color:#ff8a8d}
+.badge .led{width:8px;height:8px;border-radius:50%;background:currentColor}
+.outlet p{margin:8px 0 0;font-size:14px;color:var(--smoke)}
+.outlet .hrs{color:var(--ink);font-weight:600}
+.outlet a{color:var(--taxi);font-size:14px;font-weight:600}
+.contact{margin-top:14px;display:flex;flex-direction:column;gap:8px}
+.contact div{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-width:0}
+.contact .lbl{font-size:11px;font-weight:700;letter-spacing:0.2em;color:var(--taxi);text-transform:uppercase}
+.contact .val{font-size:15px;font-weight:600;user-select:all;overflow-wrap:anywhere}
+.copy{all:unset;cursor:pointer;font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--night);background:var(--taxi);border-radius:999px;padding:8px 14px;flex:0 0 auto}
+
+.routes{display:grid;grid-template-columns:repeat(2, minmax(0,1fr));gap:10px;margin-top:18px}
+.route{border-radius:10px;padding:16px;background:#050505;border:1px solid var(--line);min-width:0}
+.route.b{background:var(--taxi);color:var(--night);border-color:var(--taxi)}
+.route .k{font-size:11px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase}
+.route .v{font-family:var(--f-display);font-size:34px;line-height:1.05;margin-top:6px}
+.route .s{font-size:13px;margin-top:4px}
+
+footer{position:relative;z-index:2;background:#050505;border-top:6px solid transparent;border-image:repeating-linear-gradient(90deg,var(--taxi) 0 24px,#050505 24px 48px) 6;
+  padding-left:max(16px, env(safe-area-inset-left,0px));padding-right:max(16px, env(safe-area-inset-right,0px));padding-block:40px 110px}
+footer .wrap{max-width:960px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fit, minmax(240px,1fr));gap:24px}
+footer h3{font-size:22px;color:var(--taxi);margin:0 0 8px}
+footer p,footer li{color:var(--smoke);font-size:14px;margin:0}
+footer ul{margin:0;padding-left:18px;display:grid;gap:4px}
+footer a{color:var(--ink)}footer a:hover{color:var(--taxi)}
+
+.toast{position:fixed;z-index:6;left:50%;top:calc(84px + env(safe-area-inset-top,0px));transform:translate(-50%,-10px);opacity:0;max-width:calc(100% - 32px);text-align:center;
+  background:var(--taxi);color:var(--night);font-weight:700;font-size:14px;padding:10px 18px;border-radius:999px;transition:opacity .25s, transform .25s;pointer-events:none}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+
+@media (max-width:860px){
+  .nav a:not(.order){display:none}
+}
+@media (max-width:760px){
+  .dots,.room{display:none}
+  .sec,.sec.right{align-items:flex-end;justify-content:flex-start;min-height:125vh}
+  .card{margin-inline:0;padding:22px 20px}
+  .checker{margin:-22px -20px 18px}
+  .brand span{display:none}
+  .menu-list{grid-template-columns:minmax(0,1fr)}
+  .hero-dish{grid-template-columns:96px minmax(0,1fr)}
+  .hero-dish img{width:96px;height:96px}
+  .hero{padding-block:120px 90px}
+  .hero h1{font-size:clamp(52px, 15vw, 80px)}
+  .status{font-size:12px}
+}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style>
+
+<canvas id="scene" aria-hidden="true"></canvas>
+<div class="fallback" aria-hidden="true"></div>
+
+<header class="topbar">
+  <a class="brand" href="#welcome" aria-label="Taxi Chick-Inn home"><img src="img/logo.jpg" alt=""><span>Taxi Chick-Inn</span></a>
+  <nav class="nav" aria-label="Main">
+    <a href="#story">Story</a>
+    <a href="#menu">Menu</a>
+    <a href="#visit">Visit</a>
+    <a href="#franchise">Franchise</a>
+    <a class="order" href="#visit">Find us</a>
+  </nav>
+</header>
+
+<nav aria-label="Walk-through stops"><ul class="dots" id="dots"></ul></nav>
+
+<div class="status" id="status" aria-live="polite"><span class="led"></span><span>Sindhi Camp open now <small>· 24 hours</small></span></div>
+<div class="room" id="room" aria-hidden="true">Outside</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<main>
+  <section class="sec hero" id="welcome" data-label="Welcome" data-room="Outside">
+    <div class="card">
+      <div class="eyebrow">North Indian &amp; Mughlai restaurant · Jaipur</div>
+      <h1>Taxi<span class="y">Chick-Inn</span></h1>
+      <p class="sub">Kali Mirch Chicken, smoky tandoor and slow-cooked biryani, served late in a taxi-yellow dining room. Pull in, the kitchen is still fired up.</p>
+      <div class="script">Same Chicken. Different Destination.</div>
+      <div class="btns">
+        <a class="btn solid" href="#menu">See the menu</a>
+        <a class="btn" href="#visit">Find a restaurant</a>
+      </div>
+      <div class="tip">Scroll to walk in · drag to look around · tap the food</div>
+    </div>
+  </section>
+
+  <section class="sec" id="story" data-label="Our story" data-room="Entrance">
+    <article class="card">
+      <div class="checker" aria-hidden="true"></div>
+      <div class="eyebrow">Our story</div>
+      <h2>Fired up in Jaipur<br><em>since 2015.</em></h2>
+      <p>Taxi Chick-Inn began as a round-the-clock chicken restaurant on Station Road in Sindhi Camp, beside the city's main bus stand. Travellers, night-shift workers and late-night foodies kept the tandoor busy at every hour, and the taxi-yellow name stuck.</p>
+      <ol class="tl">
+        <li><span class="y">2015</span><div><b>Sindhi Camp opens</b><span>Station Road, by the bus stand. Open 24 hours.</span></div></li>
+        <li><span class="y">c. 2017</span><div><b>Raja Park, C-Scheme</b><span>A second dining room near Chomu House Circle. Since closed.</span></div></li>
+        <li><span class="y">Today</span><div><b>Malviya Nagar</b><span>Palika Bazaar, Sector 13, opposite Dussehra Maidan.</span></div></li>
+        <li><span class="y">2026</span><div><b>A bolder new look</b><span>Fresh branding, and franchises open beyond Jaipur.</span></div></li>
+      </ol>
+    </article>
+  </section>
+
+  <section class="sec right" id="dining" data-label="Dining room" data-room="Dining room">
+    <article class="card">
+      <div class="checker" aria-hidden="true"></div>
+      <div class="eyebrow">The dining room</div>
+      <h2>Grab a table.<br><em>Stay a while.</em></h2>
+      <p>Yellow chairs, taxi art on the walls and a crowd that ranges from college friends to three-generation family dinners. Come for a quick roll or settle in for a full tandoori spread.</p>
+      <div class="gal">
+        <img src="img/interior.jpg" alt="Dining room with yellow chairs and framed taxi art" loading="lazy">
+        <img src="img/girl.jpg" alt="Guest tasting butter chicken with roti" loading="lazy">
+        <img src="img/guy.jpg" alt="Guest enjoying tandoori chicken" loading="lazy">
+      </div>
+      <ul class="chips">
+        <li>Dine-in</li><li>Takeaway</li><li>Delivery</li><li>Veg &amp; non-veg</li><li>Groups &amp; families</li>
+      </ul>
+    </article>
+  </section>
+
+  <section class="sec" id="menu" data-label="Menu" data-room="At your table">
+    <article class="card wide">
+      <div class="checker" aria-hidden="true"></div>
+      <div class="eyebrow">The menu</div>
+      <h2>Order like<br><em>a regular.</em></h2>
+      <div class="hero-dish">
+        <img src="img/kali.jpg" alt="Kali Mirch Chicken on a sizzling plate" loading="lazy">
+        <div><div class="eyebrow">Signature</div><h3>Kali Mirch Chicken</h3><p>Our best-known dish: chicken in a rich, creamy black-pepper gravy. The plate most guests come back for.</p></div>
+      </div>
+      <div class="tabs" role="tablist" aria-label="Menu sections" id="tabs"></div>
+      <ul class="menu-list" id="menuList" role="tabpanel"></ul>
+      <p class="muted">For current prices and delivery, order through Zomato or Swiggy, or call the restaurant.</p>
+    </article>
+  </section>
+
+  <section class="sec right" id="kitchen" data-label="Kitchen" data-room="Tandoor">
+    <article class="card">
+      <div class="checker" aria-hidden="true"></div>
+      <div class="eyebrow">From the kitchen</div>
+      <h2>Straight off<br><em>the tandoor.</em></h2>
+      <p>The clay tandoor runs hot from opening to closing. Marinated chicken, paneer tikka, soya chaap and fresh naan all come out charred at the edges and juicy inside. Biryani is cooked in big pots and served steaming.</p>
+      <ul class="chips"><li><b>Tandoori</b> chicken &amp; tikka</li><li>Fresh <b>naan</b> &amp; rumali roti</li><li><b>Dum</b> biryani</li></ul>
+      <p class="muted">Tap the glowing tandoor to stoke the fire.</p>
+    </article>
+  </section>
+
+  <section class="sec" id="visit" data-label="Visit" data-room="Our outlets">
+    <article class="card">
+      <div class="checker" aria-hidden="true"></div>
+      <div class="eyebrow">Visit us</div>
+      <h2>Two stops<br><em>in Jaipur.</em></h2>
+      <div class="outlets">
+        <div class="outlet">
+          <div class="top"><h3>Sindhi Camp</h3><span class="badge on" id="b-sc"><span class="led"></span>Open now</span></div>
+          <p class="hrs">Open 24 hours, every day</p>
+          <p>Shop 9, Station Road, Sindhi Camp, Jaipur. Near the bus stand and metro.</p>
+          <p><a href="https://www.google.com/maps/search/?api=1&amp;query=Taxi+Chick-Inn+Station+Road+Sindhi+Camp+Jaipur" target="_blank" rel="noopener">Open in Google Maps</a></p>
+        </div>
+        <div class="outlet">
+          <div class="top"><h3>Malviya Nagar</h3><span class="badge" id="b-mn"><span class="led"></span>…</span></div>
+          <p class="hrs">2 PM – 2 AM, every day</p>
+          <p>Shop 3, 13/10 Palika Bazaar, Sector 13, opp. Dussehra Maidan, Malviya Nagar, Jaipur.</p>
+          <p><a href="https://www.google.com/maps/search/?api=1&amp;query=Taxi+Chick-Inn+Palika+Bazaar+Malviya+Nagar+Jaipur" target="_blank" rel="noopener">Open in Google Maps</a></p>
+        </div>
+      </div>
+      <div class="contact">
+        <div><span><span class="lbl">Call</span><br><span class="val" id="phone">+91 77270 17777</span></span><button type="button" class="copy" data-copy="phone">Copy</button></div>
+        <div><span><span class="lbl">Email</span><br><span class="val" id="email">taxichickinnjpr@gmail.com</span></span><button type="button" class="copy" data-copy="email">Copy</button></div>
+      </div>
+    </article>
+  </section>
+
+  <section class="sec right" id="franchise" data-label="Franchise" data-room="Menu board">
+    <article class="card">
+      <div class="checker" aria-hidden="true"></div>
+      <div class="eyebrow">Franchise</div>
+      <h2>Open a Taxi Chick-Inn<br><em>in your city.</em></h2>
+      <p>Bring this dining room to your neighbourhood. We provide the recipes, training, layouts, site selection and launch marketing.</p>
+      <div class="routes">
+        <div class="route"><div class="k">Express kitchen</div><div class="v">₹18.5 L</div><div class="s">400–600 sq ft, delivery-first</div></div>
+        <div class="route b"><div class="k">Flagship restaurant</div><div class="v">₹43.5 L</div><div class="s">1,500–2,500 sq ft, full dine-in</div></div>
+      </div>
+      <div class="btns"><a class="btn solid" href="#visit">Talk to us</a></div>
+      <p class="muted">Investment figures are from the Taxi Chick-Inn franchise proposal. Returns depend on location and operations.</p>
+    </article>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div>
+      <h3>Taxi Chick-Inn</h3>
+      <p>North Indian, Mughlai, tandoor, biryani, rolls and Chinese. Jaipur, Rajasthan.</p>
+      <p style="margin-top:8px">+91 77270 17777<br>taxichickinnjpr@gmail.com</p>
+    </div>
+    <div>
+      <h3>Hours</h3>
+      <ul><li>Sindhi Camp: 24 hours</li><li>Malviya Nagar: 2 PM – 2 AM</li></ul>
+    </div>
+    <div>
+      <h3>Sources</h3>
+      <ul>
+        <li><a href="https://franchiseoptions.in/franchise-listing/taxi-chick-inn/" target="_blank" rel="noopener">Franchise Options</a></li>
+        <li><a href="https://www.district.in/dining/jaipur/taxi-chick-inn-sindhi-camp" target="_blank" rel="noopener">District: Sindhi Camp</a></li>
+        <li><a href="https://www.district.in/dining/jaipur/taxi-chick-inn-malviya-nagar" target="_blank" rel="noopener">District: Malviya Nagar</a></li>
+        <li><a href="https://magicpin.in/Jaipur/C-Scheme/Restaurant/Taxi-Chick-inn/store/10b73b" target="_blank" rel="noopener">magicpin: Raja Park</a></li>
+        <li><a href="https://www.eazydiner.com/jaipur/taxi-chick-inn-sindhi-camp-jaipur-648113" target="_blank" rel="noopener">EazyDiner</a></li>
+      </ul>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+  const reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const sections=Array.from(document.querySelectorAll('.sec'));
+
+  /* ---------- menu tabs ---------- */
+  const MENU={
+    'Signatures':[['Kali Mirch Chicken','Creamy black-pepper chicken, the house favourite',0],['Chicken Junglee Combo','A loaded chicken platter for sharing',0],['Cocktail Chicken','Party-style chicken starter',0],['Chicken Kali Mirch Tikka','Peppery chicken tikka from the tandoor',0]],
+    'Tandoor':[['Tandoori Chicken','Whole-spiced chicken, charred in the clay oven',0],['Paneer Tikka','Marinated cottage cheese, smoky edges',1],['Tandoori Soya Chaap','Spiced soya chaap off the skewer',1],['Tandoori Mushroom Tikka','Mushrooms in tikka masala',1]],
+    'Curries':[['Butter Chicken','Tandoori chicken in a buttery tomato gravy',0],['Murgh Hara Dhaniya','Chicken in a fresh coriander gravy',0],['Egg Curry','Boiled eggs in onion-tomato masala',0],['Kadhai Paneer','Paneer with peppers in kadhai masala',1],['Dal Makhani','Black lentils slow-cooked with butter',1],['Paneer Bhurji','Scrambled paneer with onion and spices',1]],
+    'Biryani':[['Chicken Biryani','Fragrant rice layered with chicken',0],['Chicken Tikka Biryani','Biryani made with tandoori chicken tikka',0],['Chicken Fried Rice','Indo-Chinese wok-tossed rice',0]],
+    'Rolls':[['Butter Chicken Roll','Butter chicken wrapped in a paratha',0],['Egg Chicken Roll','Chicken and egg in a flaky roll',0],['Egg Kathi Roll','Egg-coated paratha with onions',0],['Paneer Tikka Roll','Paneer tikka wrapped to go',1],['Soya Chaap Roll','Spiced chaap in a roll',1]],
+    'Breads & sides':[['Rumali Roti','Thin handkerchief bread',1],['Cheese Naan','Naan stuffed with cheese',1],['Butter Roti','Tandoori roti with butter',1],['Dahi Raita','Cool spiced yoghurt',1]]
+  };
+  const tabsEl=document.getElementById('tabs'),listEl=document.getElementById('menuList');
+  function showMenu(name){
+    tabsEl.querySelectorAll('button').forEach(b=>b.setAttribute('aria-selected',b.textContent===name?'true':'false'));
+    listEl.innerHTML='';
+    MENU[name].forEach(([n,d,v])=>{const li=document.createElement('li');li.innerHTML='<div class="n"><span class="'+(v?'veg':'nv')+'" title="'+(v?'Vegetarian':'Non-vegetarian')+'"></span><span></span></div><div class="d"></div>';li.querySelector('.n span:last-child').textContent=n;li.querySelector('.d').textContent=d;listEl.appendChild(li);});
+  }
+  Object.keys(MENU).forEach((k,i)=>{const b=document.createElement('button');b.type='button';b.setAttribute('role','tab');b.id='tab-'+i;b.textContent=k;b.addEventListener('click',()=>showMenu(k));tabsEl.appendChild(b);});
+  showMenu('Signatures');
+
+  /* ---------- open now (Jaipur time) ---------- */
+  function jaipurHour(){try{return Number(new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Kolkata',hour:'2-digit',hour12:false}).format(new Date()))%24;}catch(e){return new Date().getHours();}}
+  function updateOpen(){
+    const h=jaipurHour();const mnOpen=(h>=14||h<2);
+    const b=document.getElementById('b-mn');b.className='badge '+(mnOpen?'on':'off');b.lastChild.textContent=mnOpen?'Open now':'Opens 2 PM';
+  }
+  updateOpen();setInterval(updateOpen,60000);
+
+  /* ---------- dots, copy, toast ---------- */
+  const dotsEl=document.getElementById('dots');
+  sections.forEach(s=>{const li=document.createElement('li'),b=document.createElement('button');b.type='button';b.innerHTML='<span class="t"></span><span class="d"></span>';b.querySelector('.t').textContent=s.dataset.label;b.setAttribute('aria-label','Go to '+s.dataset.label);b.addEventListener('click',()=>s.scrollIntoView({behavior:reduce?'auto':'smooth',block:'center'}));li.appendChild(b);dotsEl.appendChild(li);});
+  const dotBtns=Array.from(dotsEl.querySelectorAll('button'));
+  const toastEl=document.getElementById('toast');let toastT;
+  function toast(m){toastEl.textContent=m;toastEl.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>toastEl.classList.remove('show'),2000);}
+  document.querySelectorAll('.copy').forEach(btn=>btn.addEventListener('click',()=>{
+    const el=document.getElementById(btn.dataset.copy),txt=el.textContent.trim();
+    const ok=()=>{btn.textContent='Copied';setTimeout(()=>btn.textContent='Copy',1500);};
+    const fb=()=>{const r=document.createRange();r.selectNodeContents(el);const s=getSelection();s.removeAllRanges();s.addRange(r);toast('Selected. Press Ctrl+C or Cmd+C to copy');};
+    try{navigator.clipboard.writeText(txt).then(ok,fb);}catch(e){fb();}
+  }));
+
+  /* ---------- scroll → walk progress ---------- */
+  const N=sections.length;let anchors=[];
+  function measure(){const vh=innerHeight;anchors=sections.map((s,i)=>({y:i?Math.max(0,s.offsetTop+s.offsetHeight/2-vh/2):0,t:i/(N-1)}));}
+  function scrollToT(y){
+    for(let i=0;i<anchors.length-1;i++){const a=anchors[i],b=anchors[i+1];if(y<=b.y)return a.t+(b.t-a.t)*Math.max(0,(y-a.y)/Math.max(1,b.y-a.y));}
+    return 1;
+  }
+  measure();addEventListener('resize',measure);addEventListener('load',measure);
+  const roomEl=document.getElementById('room');let activeIdx=-1;
+  function updateNav(){let idx=0;const y=scrollY+innerHeight/2;sections.forEach((s,i)=>{if(y>=s.offsetTop)idx=i;});
+    if(idx!==activeIdx){activeIdx=idx;dotBtns.forEach((b,i)=>b.classList.toggle('on',i===idx));roomEl.textContent=sections[idx].dataset.room;}}
+
+  /* ---------- sounds (start only after a tap) ---------- */
+  let actx=null;
+  function ctx(){try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();}catch(e){}return actx;}
+  function honk(){const a=ctx();if(a){const now=a.currentTime;[0,0.22].forEach(off=>[370,466].forEach(f=>{const o=a.createOscillator(),g=a.createGain();o.type='square';o.frequency.value=f;g.gain.setValueAtTime(0.0001,now+off);g.gain.exponentialRampToValueAtTime(0.07,now+off+0.02);g.gain.exponentialRampToValueAtTime(0.0001,now+off+0.18);o.connect(g).connect(a.destination);o.start(now+off);o.stop(now+off+0.2);}));}toast('Beep beep! Your table is ready.');}
+  function sizzle(){const a=ctx();if(!a)return;const len=a.sampleRate*0.9,buf=a.createBuffer(1,len,a.sampleRate),d=buf.getChannelData(0);for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*(1-i/len)*(Math.random()<0.3?1:0.3);const s=a.createBufferSource(),f=a.createBiquadFilter(),g=a.createGain();f.type='highpass';f.frequency.value=2500;g.gain.value=0.12;s.buffer=buf;s.connect(f).connect(g).connect(a.destination);s.start();}
+
+  if(typeof THREE==='undefined'){document.body.classList.add('no-webgl');addEventListener('scroll',updateNav,{passive:true});updateNav();return;}
+  const canvas=document.getElementById('scene');let renderer;
+  try{renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});}catch(e){document.body.classList.add('no-webgl');addEventListener('scroll',updateNav,{passive:true});updateNav();return;}
+  renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));
+  renderer.outputEncoding=THREE.sRGBEncoding;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.1;
+
+  const scene=new THREE.Scene();scene.background=new THREE.Color(0x0c0a09);scene.fog=new THREE.Fog(0x0c0a09,18,70);
+  const camera=new THREE.PerspectiveCamera(58,1,0.05,200);
+  scene.add(new THREE.HemisphereLight(0xffe6c0,0x1a0f08,0.32));
+
+  function canvasTex(w,h,draw){const c=document.createElement('canvas');c.width=w;c.height=h;draw(c.getContext('2d'),w,h);const t=new THREE.CanvasTexture(c);t.encoding=THREE.sRGBEncoding;t.anisotropy=4;t._draw=draw;return t;}
+  function redraw(t){const c=t.image;t._draw(c.getContext('2d'),c.width,c.height);t.needsUpdate=true;}
+  const loader=new THREE.TextureLoader();
+  function photo(src){const t=loader.load(src);t.encoding=THREE.sRGBEncoding;return t;}
+  const glowTex=canvasTex(128,128,(g,w,h)=>{const r=g.createRadialGradient(w/2,h/2,0,w/2,h/2,w/2);r.addColorStop(0,'rgba(255,236,190,1)');r.addColorStop(0.3,'rgba(255,190,80,0.5)');r.addColorStop(1,'rgba(255,160,0,0)');g.fillStyle=r;g.fillRect(0,0,w,h);});
+  function glow(color,s){const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true}));sp.scale.set(s,s,1);return sp;}
+  const M=(o)=>new THREE.MeshStandardMaterial(o);
+  const clickables=[];
+
+  /* ===== room shell: x -10..10, z 0..-40, h 6 ===== */
+  const W=10,D=40,H=6;
+  const floorTex=canvasTex(256,256,(g,w,h)=>{const n=4;for(let y=0;y<n;y++)for(let x=0;x<n;x++){g.fillStyle=(x+y)%2?'#151312':'#2a2622';g.fillRect(x*w/n,y*h/n,w/n,h/n);}});
+  floorTex.wrapS=floorTex.wrapT=THREE.RepeatWrapping;floorTex.repeat.set(5,10);
+  const floor=new THREE.Mesh(new THREE.PlaneGeometry(2*W,D),M({map:floorTex,roughness:0.55,metalness:0.1}));floor.rotation.x=-Math.PI/2;floor.position.set(0,0,-D/2);scene.add(floor);
+  const ceil=new THREE.Mesh(new THREE.PlaneGeometry(2*W,D),M({color:0x0e0c0b,roughness:1}));ceil.rotation.x=Math.PI/2;ceil.position.set(0,H,-D/2);scene.add(ceil);
+  const wallTex=canvasTex(512,256,(g,w,h)=>{g.fillStyle='#1d1917';g.fillRect(0,0,w,h);g.fillStyle='#7a1418';g.fillRect(0,h*0.62,w,h*0.38);for(let x=0;x<w;x+=16){g.fillStyle=(x/16)%2?'#0a0a0a':'#ffc928';g.fillRect(x,h*0.58,16,8);g.fillStyle=(x/16)%2?'#ffc928':'#0a0a0a';g.fillRect(x,h*0.58+8,16,8);}for(let x=0;x<w;x+=64){g.fillStyle='rgba(0,0,0,0.25)';g.fillRect(x,h*0.62,2,h*0.38);}});
+  wallTex.wrapS=THREE.RepeatWrapping;
+  function wall(len,pos,rotY){const t=wallTex.clone();t.needsUpdate=true;t.repeat.set(len/8,1);const m=new THREE.Mesh(new THREE.PlaneGeometry(len,H),M({map:t,roughness:0.9}));m.position.copy(pos);m.rotation.y=rotY;scene.add(m);return m;}
+  wall(D,new THREE.Vector3(-W,H/2,-D/2),Math.PI/2);
+  wall(D,new THREE.Vector3(W,H/2,-D/2),-Math.PI/2);
+  wall(2*W,new THREE.Vector3(0,H/2,-D),0);
+
+  /* front facade with door */
+  const facadeMat=M({color:0x0d0d0d,roughness:0.7});
+  const fL=new THREE.Mesh(new THREE.BoxGeometry(8,H,0.3),facadeMat);fL.position.set(-6,H/2,0);scene.add(fL);
+  const fR=fL.clone();fR.position.x=6;scene.add(fR);
+  const lintel=new THREE.Mesh(new THREE.BoxGeometry(4,H-3.2,0.3),facadeMat);lintel.position.set(0,3.2+(H-3.2)/2,0);scene.add(lintel);
+  const glassMat=new THREE.MeshStandardMaterial({color:0xffd27a,transparent:true,opacity:0.16,roughness:0.05,metalness:0.2,emissive:0x5a3a10,emissiveIntensity:0.6});
+  [-6,6].forEach(x=>{const win=new THREE.Mesh(new THREE.PlaneGeometry(5,2.4),glassMat);win.position.set(x,1.9,0.16);scene.add(win);fL.material=facadeMat;});
+  // cut windows visually: dark frame bars
+  const bandTexF=canvasTex(256,32,(g,w,h)=>{for(let x=0;x<w;x+=16)for(let y=0;y<2;y++){g.fillStyle=((x/16)+y)%2?'#0a0a0a':'#ffc928';g.fillRect(x,y*16,16,16);}});
+  bandTexF.wrapS=THREE.RepeatWrapping;bandTexF.repeat.set(10,1);
+  const fBand=new THREE.Mesh(new THREE.PlaneGeometry(20,0.5),M({map:bandTexF,emissive:0xffffff,emissiveMap:bandTexF,emissiveIntensity:0.25}));fBand.position.set(0,3.45,0.17);scene.add(fBand);
+  const logoBoard=new THREE.Mesh(new THREE.PlaneGeometry(6.2,3.2),M({map:photo('img/logo.jpg'),emissive:0xffffff,emissiveMap:photo('img/logo.jpg'),emissiveIntensity:0.75}));logoBoard.position.set(0,4.75,0.18);scene.add(logoBoard);
+  const neonTex=canvasTex(512,128,(g,w,h)=>{g.clearRect(0,0,w,h);g.font='72px "Kaushan Script", cursive';g.textAlign='center';g.textBaseline='middle';g.shadowColor='#ff3b3b';g.shadowBlur=18;g.fillStyle='#ff6a6a';g.fillText('Open Late',w/2,h/2+4);});
+  const neon=new THREE.Mesh(new THREE.PlaneGeometry(3.4,0.85),new THREE.MeshBasicMaterial({map:neonTex,transparent:true}));neon.position.set(6,2.6,0.2);scene.add(neon);
+  const neonLight=new THREE.PointLight(0xff4040,1.4,9,2);neonLight.position.set(6,2.6,1.2);scene.add(neonLight);
+  const doorLight=new THREE.PointLight(0xffc46a,2.4,14,2);doorLight.position.set(0,5.6,2.4);scene.add(doorLight);
+  const awningGlow=glow(0xffc46a,4);awningGlow.position.set(0,3.35,0.6);scene.add(awningGlow);
+
+  /* street outside */
+  const street=new THREE.Mesh(new THREE.PlaneGeometry(80,30),M({color:0x111014,roughness:0.95}));street.rotation.x=-Math.PI/2;street.position.set(0,-0.01,15);scene.add(street);
+  const pave=new THREE.Mesh(new THREE.BoxGeometry(40,0.12,3.5),M({color:0x2a2724,roughness:0.9}));pave.position.set(0,0.06,1.9);scene.add(pave);
+  for(let x=-30;x<=30;x+=6){const dash=new THREE.Mesh(new THREE.PlaneGeometry(3,0.18),new THREE.MeshBasicMaterial({color:0xd8d0bc}));dash.rotation.x=-Math.PI/2;dash.position.set(x,0.01,11);scene.add(dash);}
+  [-14,14].forEach(x=>{const pole=new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.12,6,8),M({color:0x2a2833,metalness:0.5,roughness:0.5}));pole.position.set(x,3,3.6);scene.add(pole);const g=glow(0xffc46a,6);g.position.set(x,6,3.6);scene.add(g);const l=new THREE.PointLight(0xffb867,1.2,16,2);l.position.set(x,5.8,4);scene.add(l);});
+  // neighbouring shopfronts
+  [[-17,0x2a1d14],[17,0x14202a]].forEach(([x,c])=>{const b=new THREE.Mesh(new THREE.BoxGeometry(14,9,8),M({color:c,roughness:0.9}));b.position.set(x,4.5,-4);scene.add(b);});
+  {const SN=400,pos=new Float32Array(SN*3);for(let i=0;i<SN;i++){pos[i*3]=(Math.random()-0.5)*160;pos[i*3+1]=20+Math.random()*50;pos[i*3+2]=30+Math.random()*40;}const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(pos,3));scene.add(new THREE.Points(g,new THREE.PointsMaterial({size:0.5,color:0xd8dcff,fog:false})));}
+
+  /* parked taxi outside */
+  function makeTaxi(){
+    const taxi=new THREE.Group();
+    const yellow=M({color:0xffc928,roughness:0.4,metalness:0.1,emissive:0x2e2000,emissiveIntensity:1});
+    const black=M({color:0x0b0b0d,roughness:0.5});
+    const glassT=M({color:0x10141c,roughness:0.1,metalness:0.6,emissive:0x1a1408});
+    const chrome=M({color:0xd9d9de,roughness:0.2,metalness:1});
+    const add=(geo,mat,x,y,z,rx)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);if(rx)m.rotation.x=rx;taxi.add(m);return m;};
+    add(new THREE.BoxGeometry(2,0.72,4.3),yellow,0,0.62,0);
+    add(new THREE.BoxGeometry(1.96,0.18,1.2),yellow,0,1.0,1.35,0.08);
+    add(new THREE.BoxGeometry(1.8,0.72,2.1),yellow,0,1.34,-0.25);
+    add(new THREE.BoxGeometry(1.86,0.08,2.0),yellow,0,1.73,-0.25);
+    add(new THREE.BoxGeometry(1.66,0.56,0.04),glassT,0,1.36,0.82,-0.28);
+    add(new THREE.BoxGeometry(1.66,0.56,0.04),glassT,0,1.36,-1.32,0.28);
+    [-1,1].forEach(s=>add(new THREE.BoxGeometry(0.04,0.5,1.85),glassT,s*0.91,1.38,-0.25));
+    const band=canvasTex(256,32,(g,w,h)=>{for(let x=0;x<w;x+=16)for(let y=0;y<2;y++){g.fillStyle=((x/16)+y)%2?'#0a0a0a':'#ffc928';g.fillRect(x,y*16,16,16);}});band.wrapS=THREE.RepeatWrapping;band.repeat.set(2,1);
+    add(new THREE.BoxGeometry(2.03,0.22,4.32),M({map:band,roughness:0.5}),0,0.8,0);
+    const st=canvasTex(256,96,(g,w,h)=>{g.fillStyle='#ffd23f';g.fillRect(0,0,w,h);g.fillStyle='#0a0a0a';g.font='64px Anton, Impact, sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText('TAXI',w/2,h/2+4);});
+    const sm=M({map:st,emissive:0xffffff,emissiveMap:st,emissiveIntensity:0.9});
+    const rs=new THREE.Mesh(new THREE.BoxGeometry(0.95,0.3,0.36),[black,black,black,black,sm,sm]);rs.position.set(0,1.92,-0.25);rs.rotation.y=Math.PI/2;taxi.add(rs);
+    const sg=glow(0xffd23f,1.6);sg.position.set(0,1.95,-0.25);taxi.add(sg);
+    [1,-1].forEach(e=>add(new THREE.BoxGeometry(2.1,0.16,0.14),chrome,0,0.36,e*2.18));
+    [-0.72,0.72].forEach(x=>{const h=add(new THREE.CylinderGeometry(0.15,0.15,0.06,16),new THREE.MeshBasicMaterial({color:0xfff6d8}),x,0.68,2.17,Math.PI/2);const hg=glow(0xfff1c4,1.4);hg.position.set(x,0.68,2.3);taxi.add(hg);add(new THREE.BoxGeometry(0.3,0.14,0.04),new THREE.MeshBasicMaterial({color:0xff2a1e}),x,0.7,-2.17);});
+    const tyre=new THREE.CylinderGeometry(0.4,0.4,0.3,20);tyre.rotateZ(Math.PI/2);
+    [[-0.95,1.35],[0.95,1.35],[-0.95,-1.35],[0.95,-1.35]].forEach(([x,z])=>{add(tyre,black,x,0.4,z);});
+    const sh=new THREE.Mesh(new THREE.PlaneGeometry(2.6,5),new THREE.MeshBasicMaterial({color:0,transparent:true,opacity:0.5,depthWrite:false}));sh.rotation.x=-Math.PI/2;sh.position.y=0.02;taxi.add(sh);
+    return taxi;
+  }
+  const taxi=makeTaxi();taxi.position.set(4.6,0,6.6);taxi.rotation.y=Math.PI/2+0.08;scene.add(taxi);
+  taxi.traverse(o=>{o.userData.kind='taxi';});clickables.push(taxi);
+  const taxiKey=new THREE.PointLight(0xfff0d0,1.2,8,2);taxiKey.position.set(5,4,9);scene.add(taxiKey);
+
+  /* ===== dining room ===== */
+  const wood=M({color:0x3b2416,roughness:0.6});
+  const chairMat=M({color:0xffc21a,roughness:0.35,metalness:0.55});
+  const plateMat=M({color:0xf4efe6,roughness:0.3});
+  const chickMat=M({color:0x8a2f0c,roughness:0.55,emissive:0x2a0800,emissiveIntensity:0.6});
+  const curryMat=M({color:0xd8661a,roughness:0.4,emissive:0x3a1200,emissiveIntensity:0.5});
+  const riceMat=M({color:0xf1d48a,roughness:0.7});
+  const naanMat=M({color:0xd9a35b,roughness:0.8});
+  const chairGeo={seat:new THREE.BoxGeometry(0.46,0.05,0.46),back:new THREE.BoxGeometry(0.46,0.42,0.04),leg:new THREE.CylinderGeometry(0.02,0.025,0.45,6)};
+  function chair(x,z,rot){const c=new THREE.Group();const s=new THREE.Mesh(chairGeo.seat,chairMat);s.position.y=0.46;c.add(s);const b=new THREE.Mesh(chairGeo.back,chairMat);b.position.set(0,0.7,-0.21);c.add(b);[[-0.2,-0.2],[0.2,-0.2],[-0.2,0.2],[0.2,0.2]].forEach(([a,d])=>{const l=new THREE.Mesh(chairGeo.leg,chairMat);l.position.set(a,0.225,d);c.add(l);});c.position.set(x,0,z);c.rotation.y=rot;scene.add(c);}
+  const DISHES=['Kali Mirch Chicken','Butter Chicken','Chicken Tikka Biryani','Tandoori Chicken','Chicken Junglee Combo','Paneer Tikka','Dal Makhani','Cocktail Chicken'];
+  let dishI=0;
+  function plate(x,z,type){
+    const g=new THREE.Group();g.position.set(x,0.79,z);
+    const p=new THREE.Mesh(new THREE.CylinderGeometry(0.2,0.16,0.03,24),plateMat);g.add(p);
+    if(type===0){for(let i=0;i<5;i++){const m=new THREE.Mesh(new THREE.SphereGeometry(0.05+Math.random()*0.02,8,6),chickMat);m.scale.set(1.4,0.7,1);m.position.set((Math.random()-0.5)*0.2,0.04,(Math.random()-0.5)*0.2);g.add(m);}}
+    else if(type===1){const b=new THREE.Mesh(new THREE.CylinderGeometry(0.13,0.1,0.07,20),M({color:0x2b2b2b,metalness:0.7,roughness:0.3}));b.position.y=0.05;g.add(b);const c=new THREE.Mesh(new THREE.CylinderGeometry(0.115,0.115,0.01,20),curryMat);c.position.y=0.085;g.add(c);}
+    else{const r=new THREE.Mesh(new THREE.SphereGeometry(0.15,14,8,0,Math.PI*2,0,Math.PI/2),riceMat);r.scale.y=0.6;r.position.y=0.015;g.add(r);const m=new THREE.Mesh(new THREE.SphereGeometry(0.04,8,6),chickMat);m.position.set(0.05,0.07,0.02);g.add(m);}
+    const name=DISHES[dishI++%DISHES.length];g.traverse(o=>{o.userData.kind='dish';o.userData.name=name;});clickables.push(g);
+    scene.add(g);return g;
+  }
+  const lamps=[];
+  const tables=[];
+  [-12,-19,-26].forEach((z,row)=>{
+    [-6,0,6].forEach((x,col)=>{
+      const top=new THREE.Mesh(new THREE.BoxGeometry(1.6,0.07,1.0),wood);top.position.set(x,0.76,z);scene.add(top);
+      const leg=new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.25,0.74,10),M({color:0x111111,metalness:0.6,roughness:0.4}));leg.position.set(x,0.37,z);scene.add(leg);
+      chair(x-0.42,z+0.75,Math.PI);chair(x+0.42,z+0.75,Math.PI);chair(x-0.42,z-0.75,0);chair(x+0.42,z-0.75,0);
+      plate(x-0.4,z+0.18,(row+col)%3);plate(x+0.42,z-0.15,(row+col+1)%3);
+      const naan=new THREE.Mesh(new THREE.CylinderGeometry(0.14,0.14,0.015,16),naanMat);naan.scale.set(1.4,1,1);naan.position.set(x+0.05,0.8,z+0.3);scene.add(naan);
+      // pendant lamp
+      const cord=new THREE.Mesh(new THREE.CylinderGeometry(0.01,0.01,2.2,4),M({color:0x111111}));cord.position.set(x,H-1.1,z);scene.add(cord);
+      const shade=new THREE.Mesh(new THREE.ConeGeometry(0.35,0.35,20,1,true),M({color:0x111111,side:THREE.DoubleSide,roughness:0.5,metalness:0.4}));shade.position.set(x,H-2.3,z);scene.add(shade);
+      const bulb=glow(0xffc77a,1.6);bulb.position.set(x,H-2.45,z);scene.add(bulb);lamps.push(bulb);
+      tables.push({x,z});
+    });
+    const pl=new THREE.PointLight(0xffc27a,2.2,11,2);pl.position.set(0,H-2.6,z);scene.add(pl);
+    [-6,6].forEach(x=>{const l=new THREE.PointLight(0xffb867,1.1,7,2);l.position.set(x,H-2.6,z);scene.add(l);});
+  });
+
+  /* framed photos on the walls */
+  function frame(src,x,z,rotY,w,h){const g=new THREE.Group();const fr=new THREE.Mesh(new THREE.BoxGeometry(w+0.2,h+0.2,0.06),M({color:0xffc928,roughness:0.4,metalness:0.3}));g.add(fr);const pic=new THREE.Mesh(new THREE.PlaneGeometry(w,h),M({map:photo(src),roughness:0.6,emissive:0xffffff,emissiveMap:photo(src),emissiveIntensity:0.25}));pic.position.z=0.035;g.add(pic);g.position.set(x,3.0,z);g.rotation.y=rotY;scene.add(g);}
+  frame('img/guy.jpg',-9.95,-8,Math.PI/2,1.4,1.85);
+  frame('img/kali.jpg',-9.95,-15.5,Math.PI/2,1.4,1.85);
+  frame('img/girl.jpg',-9.95,-23,Math.PI/2,1.4,1.85);
+  frame('img/napkin.jpg',9.95,-9,-Math.PI/2,1.6,1.6);
+  frame('img/box.jpg',9.95,-16,-Math.PI/2,1.6,1.6);
+  frame('img/chef.jpg',-9.95,-30,Math.PI/2,1.2,2.0);
+
+  /* outlets board, right wall */
+  const outTex=canvasTex(1024,600,(g,w,h)=>{
+    g.fillStyle='#ffc928';g.fillRect(0,0,w,h);
+    for(let x=0;x<w;x+=40){g.fillStyle=(x/40)%2?'#0a0a0a':'#ffc928';g.fillRect(x,0,40,40);g.fillStyle=(x/40)%2?'#ffc928':'#0a0a0a';g.fillRect(x,h-40,40,40);}
+    g.fillStyle='#0a0a0a';g.font='96px Anton, Impact, sans-serif';g.fillText('OUR STOPS',50,150);
+    g.fillStyle='#d71920';g.font='64px Anton, Impact, sans-serif';g.fillText('SINDHI CAMP',50,260);
+    g.fillStyle='#0a0a0a';g.font='600 34px Poppins, sans-serif';g.fillText('Station Road · Open 24 hours',50,310);
+    g.fillStyle='#d71920';g.font='64px Anton, Impact, sans-serif';g.fillText('MALVIYA NAGAR',50,410);
+    g.fillStyle='#0a0a0a';g.font='600 34px Poppins, sans-serif';g.fillText('Palika Bazaar, Sector 13 · 2 PM – 2 AM',50,460);
+    g.font='600 30px Poppins, sans-serif';g.fillText('+91 77270 17777',50,525);
+  });
+  const outBoard=new THREE.Mesh(new THREE.PlaneGeometry(5.1,3),M({map:outTex,emissive:0xffffff,emissiveMap:outTex,emissiveIntensity:0.5,roughness:0.6}));outBoard.position.set(9.94,2.9,-25);outBoard.rotation.y=-Math.PI/2;scene.add(outBoard);
+  const outLight=new THREE.PointLight(0xffd27a,1.5,9,2);outLight.position.set(7.5,4.5,-25);scene.add(outLight);
+
+  /* ===== kitchen ===== */
+  const counterTex=canvasTex(512,64,(g,w,h)=>{for(let x=0;x<w;x+=32)for(let y=0;y<2;y++){g.fillStyle=((x/32)+y)%2?'#0a0a0a':'#ffc928';g.fillRect(x,y*32,32,32);}});counterTex.wrapS=THREE.RepeatWrapping;counterTex.repeat.set(4,1);
+  const counter=new THREE.Mesh(new THREE.BoxGeometry(14,1.1,0.9),[M({color:0x1a1a1a}),M({color:0x1a1a1a}),M({color:0x2a2a2a,metalness:0.6,roughness:0.3}),M({color:0x1a1a1a}),M({map:counterTex,roughness:0.5}),M({color:0x1a1a1a})]);
+  counter.position.set(2,0.55,-32.5);scene.add(counter);
+  const steel=M({color:0xb9bcc2,metalness:0.9,roughness:0.25});
+  // tandoor
+  const tandoor=new THREE.Group();tandoor.position.set(-6,0,-35.5);
+  const clay=M({color:0x8e4a26,roughness:0.95});
+  const tb=new THREE.Mesh(new THREE.CylinderGeometry(0.75,0.9,1.1,28,1,true),clay);tb.position.y=0.55;tandoor.add(tb);
+  const rim=new THREE.Mesh(new THREE.TorusGeometry(0.62,0.12,10,28),clay);rim.rotation.x=Math.PI/2;rim.position.y=1.1;tandoor.add(rim);
+  const fireMat=new THREE.MeshBasicMaterial({color:0xff7a1a});
+  const fire=new THREE.Mesh(new THREE.CircleGeometry(0.58,28),fireMat);fire.rotation.x=-Math.PI/2;fire.position.y=1.05;tandoor.add(fire);
+  const fireGlow=glow(0xff7a1a,3.2);fireGlow.position.y=1.4;tandoor.add(fireGlow);
+  [-0.3,0,0.3].forEach((x,i)=>{const sk=new THREE.Mesh(new THREE.CylinderGeometry(0.015,0.015,1.3,6),steel);sk.position.set(x,1.4,0);sk.rotation.z=0.15*(i-1);tandoor.add(sk);for(let k=0;k<3;k++){const c=new THREE.Mesh(new THREE.SphereGeometry(0.07,8,6),chickMat);c.position.set(x+0.15*(i-1)*0.4,1.55+k*0.13,0);tandoor.add(c);}});
+  scene.add(tandoor);tandoor.traverse(o=>{o.userData.kind='tandoor';});clickables.push(tandoor);
+  const fireLight=new THREE.PointLight(0xff7a2a,3,10,2);fireLight.position.set(-6,2,-35.2);scene.add(fireLight);
+  // stove & biryani pots
+  const stove=new THREE.Mesh(new THREE.BoxGeometry(5,0.9,1.2),M({color:0x2a2a2a,metalness:0.6,roughness:0.4}));stove.position.set(3,0.45,-37);scene.add(stove);
+  const pots=[];[1.5,3.2,4.8].forEach((x,i)=>{const p=new THREE.Mesh(new THREE.CylinderGeometry(0.42,0.38,0.6,24),steel);p.position.set(x,1.2,-37);scene.add(p);const lid=new THREE.Mesh(new THREE.CylinderGeometry(0.44,0.44,0.04,24),steel);lid.position.set(x,1.52,-37);scene.add(lid);pots.push(new THREE.Vector3(x,1.6,-37));});
+  const hood=new THREE.Mesh(new THREE.BoxGeometry(14,0.8,1.6),M({color:0x3a3a3a,metalness:0.8,roughness:0.35}));hood.position.set(1,4.4,-38.6);scene.add(hood);
+  const kitLight=new THREE.PointLight(0xffe1b0,1.6,12,2);kitLight.position.set(3,3.6,-35);scene.add(kitLight);
+
+  /* menu board + tagline neon on the back wall */
+  const menuTex=canvasTex(1024,512,(g,w,h)=>{
+    g.fillStyle='#111';g.fillRect(0,0,w,h);g.strokeStyle='#ffc928';g.lineWidth=10;g.strokeRect(14,14,w-28,h-28);
+    g.fillStyle='#ffc928';g.font='86px Anton, Impact, sans-serif';g.textAlign='center';g.fillText('MENU',w/2,120);
+    g.textAlign='left';const cols=[['TANDOOR','Tandoori Chicken','Chicken Kali Mirch Tikka','Paneer Tikka'],['CURRIES','Kali Mirch Chicken','Butter Chicken','Dal Makhani'],['BIRYANI & ROLLS','Chicken Tikka Biryani','Butter Chicken Roll','Paneer Tikka Roll']];
+    cols.forEach((c,i)=>{const x=60+i*320;g.fillStyle='#e0262d';g.font='44px Anton, Impact, sans-serif';g.fillText(c[0],x,210);g.fillStyle='#f7f1e3';g.font='500 28px Poppins, sans-serif';c.slice(1).forEach((t,k)=>g.fillText(t,x,270+k*56));});
+    g.fillStyle='#ffc928';g.font='500 26px Poppins, sans-serif';g.textAlign='center';g.fillText('Ask for today’s Chicken Junglee Combo',w/2,470);
+  });
+  const menuBoard=new THREE.Mesh(new THREE.PlaneGeometry(6,3),M({map:menuTex,emissive:0xffffff,emissiveMap:menuTex,emissiveIntensity:0.7}));menuBoard.position.set(2,2.6,-39.94);scene.add(menuBoard);
+  const tagTex=canvasTex(1024,128,(g,w,h)=>{g.clearRect(0,0,w,h);g.font='76px "Kaushan Script", cursive';g.textAlign='center';g.textBaseline='middle';g.shadowColor='#ffc928';g.shadowBlur=20;g.fillStyle='#ffe07a';g.fillText('Same Chicken. Different Destination.',w/2,h/2+4);});
+  const tag=new THREE.Mesh(new THREE.PlaneGeometry(9,1.1),new THREE.MeshBasicMaterial({map:tagTex,transparent:true}));tag.position.set(0,5.25,-39.9);scene.add(tag);
+  const tagLight=new THREE.PointLight(0xffd25a,1.4,10,2);tagLight.position.set(0,5,-38);scene.add(tagLight);
+  // redraw text textures once fonts are ready
+  if(document.fonts){document.fonts.ready.then(()=>[outTex,menuTex,tagTex,neonTex].forEach(redraw));}
+
+  /* embers over the tandoor, steam over pots */
+  const EN=reduce?0:160;let embers=null,eV;
+  if(EN){const pos=new Float32Array(EN*3);eV=new Float32Array(EN);for(let i=0;i<EN;i++){pos[i*3]=-6+(Math.random()-0.5)*0.9;pos[i*3+1]=1.1+Math.random()*2.5;pos[i*3+2]=-35.5+(Math.random()-0.5)*0.9;eV[i]=0.5+Math.random()*1.2;}
+    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(pos,3));embers=new THREE.Points(g,new THREE.PointsMaterial({size:0.09,map:glowTex,color:0xff8a2a,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false}));scene.add(embers);}
+  const SNum=reduce?0:90;let steam=null,sV;
+  if(SNum){const pos=new Float32Array(SNum*3);sV=new Float32Array(SNum);for(let i=0;i<SNum;i++){const p=pots[i%3];pos[i*3]=p.x+(Math.random()-0.5)*0.4;pos[i*3+1]=p.y+Math.random()*1.5;pos[i*3+2]=p.z+(Math.random()-0.5)*0.4;sV[i]=0.3+Math.random()*0.4;}
+    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(pos,3));steam=new THREE.Points(g,new THREE.PointsMaterial({size:0.5,map:glowTex,color:0x8a8a8a,transparent:true,opacity:0.25,depthWrite:false}));scene.add(steam);}
+
+  /* ===== camera path through the restaurant ===== */
+  const CAM=[[-3.5,2.3,13.5],[0.3,1.9,4.5],[-5,2.6,-6.5],[4.5,1.55,-16.4],[-2.5,2.0,-29.5],[3,2.1,-21.5],[0,2.4,-29]];
+  const LOOK=[[-7.2,3.0,0],[0,1.7,-10],[3.5,0.9,-15],[5.6,0.75,-19.1],[-6,1.2,-35.5],[9.9,2.8,-25],[1.5,3.2,-40]];
+  const camCurve=new THREE.CatmullRomCurve3(CAM.map(a=>new THREE.Vector3(...a)),false,'catmullrom',0.35);
+  const lookCurve=new THREE.CatmullRomCurve3(LOOK.map(a=>new THREE.Vector3(...a)),false,'catmullrom',0.35);
+
+  /* interaction */
+  let yaw=0,pitch=0,yawT=0,pitchT=0,drag=false,lx=0,ly=0,dx=0,dy=0,mx=0,my=0,flare=0;
+  const ray=new THREE.Raycaster(),v2=new THREE.Vector2();
+  function pick(e){const r=canvas.getBoundingClientRect();v2.set(((e.clientX-r.left)/r.width)*2-1,-((e.clientY-r.top)/r.height)*2+1);ray.setFromCamera(v2,camera);const hit=ray.intersectObjects(clickables,true)[0];return hit&&hit.distance<22?hit.object.userData:null;}
+  canvas.addEventListener('pointerdown',e=>{drag=true;lx=dx=e.clientX;ly=dy=e.clientY;canvas.classList.add('dragging');});
+  addEventListener('pointerup',e=>{
+    if(drag&&Math.hypot(e.clientX-dx,e.clientY-dy)<6&&e.target===canvas){const u=pick(e);if(u){
+      if(u.kind==='taxi')honk();
+      else if(u.kind==='dish'){toast(u.name+' · great choice!');sizzle();}
+      else if(u.kind==='tandoor'){flare=1;sizzle();toast('Fresh from the tandoor!');}
+    }}
+    drag=false;canvas.classList.remove('dragging');
+  });
+  let hoverT=0;
+  addEventListener('pointermove',e=>{
+    mx=e.clientX/innerWidth-0.5;my=e.clientY/innerHeight-0.5;
+    if(drag){yawT=THREE.MathUtils.clamp(yawT-(e.clientX-lx)*0.004,-1.2,1.2);pitchT=THREE.MathUtils.clamp(pitchT-(e.clientY-ly)*0.003,-0.5,0.5);lx=e.clientX;ly=e.clientY;}
+    else if(e.target===canvas&&performance.now()-hoverT>80){hoverT=performance.now();canvas.classList.toggle('pointing',!!pick(e));}
+  });
+
+  function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.fov=w<700?72:58;camera.updateProjectionMatrix();}
+  resize();addEventListener('resize',resize);
+
+  let t=0,last=performance.now();const cp=new THREE.Vector3(),lp=new THREE.Vector3(),dir=new THREE.Vector3(),side=new THREE.Vector3();
+  function tick(now){
+    const dt=Math.min(0.05,(now-last)/1000);last=now;
+    const tt=scrollToT(scrollY);t+=reduce?(tt-t):(tt-t)*Math.min(1,dt*3);
+    updateNav();
+    camCurve.getPoint(t,cp);lookCurve.getPoint(t,lp);
+    if(!drag){yawT*=1-Math.min(1,dt*0.8);pitchT*=1-Math.min(1,dt*0.8);}
+    yaw+=(yawT-yaw)*Math.min(1,dt*6);pitch+=(pitchT-pitch)*Math.min(1,dt*6);
+    // rotate look direction by yaw/pitch + gentle mouse parallax
+    dir.subVectors(lp,cp);const len=dir.length();dir.normalize();
+    dir.applyAxisAngle(new THREE.Vector3(0,1,0),yaw+(drag?0:-mx*0.12));
+    side.crossVectors(dir,new THREE.Vector3(0,1,0)).normalize();
+    dir.applyAxisAngle(side,pitch+(drag?0:-my*0.08));
+    if(!reduce)cp.y+=Math.sin(now*0.0016)*0.03;
+    camera.position.copy(cp);camera.lookAt(cp.x+dir.x*len,cp.y+dir.y*len,cp.z+dir.z*len);
+
+    flare=Math.max(0,flare-dt*0.7);
+    const flick=reduce?1:(0.85+Math.sin(now*0.023)*0.08+Math.sin(now*0.051)*0.07);
+    fireLight.intensity=3*flick+flare*8;fireGlow.scale.setScalar(3.2*flick+flare*3);
+    fireMat.color.setHSL(0.07+flare*0.02,1,0.5+flare*0.15);
+    if(!reduce)lamps.forEach((l,i)=>{l.material.opacity=0.92+Math.sin(now*0.002+i)*0.08;});
+    if(embers){const a=embers.geometry.attributes.position.array;for(let i=0;i<EN;i++){a[i*3+1]+=eV[i]*dt*(1+flare*3);if(a[i*3+1]>3.8){a[i*3+1]=1.1;a[i*3]=-6+(Math.random()-0.5)*0.9;a[i*3+2]=-35.5+(Math.random()-0.5)*0.9;}}embers.geometry.attributes.position.needsUpdate=true;}
+    if(steam){const a=steam.geometry.attributes.position.array;for(let i=0;i<SNum;i++){a[i*3+1]+=sV[i]*dt;a[i*3]+=Math.sin(now*0.001+i)*dt*0.08;if(a[i*3+1]>3.4){const p=pots[i%3];a[i*3+1]=p.y;a[i*3]=p.x+(Math.random()-0.5)*0.4;}}steam.geometry.attributes.position.needsUpdate=true;}
+    renderer.render(scene,camera);requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+})();
+</script>
+
+</body></html>
